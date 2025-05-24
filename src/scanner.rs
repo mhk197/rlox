@@ -5,17 +5,17 @@ use crate::error;
 
 use std::collections::HashMap;
 
-pub struct Scanner<'a> {
-    source: &'a String, 
-    tokens: Vec<Token<'a>>,
+pub struct Scanner {
+    source: String, 
+    tokens: Vec<Token>,
     start: usize, 
     current: usize, 
     line: usize,
     keywords: HashMap<&'static str, TokenType>
 }
 
-impl<'a> Scanner<'a> {
-    pub fn new(source: &'a String) -> Self{
+impl Scanner {
+    pub fn new(source: String) -> Self{
         Self {
             source, 
             tokens: Vec::new(), 
@@ -43,14 +43,14 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> &Vec<Token> {
+    pub fn scan_tokens(&mut self) -> Vec<Token> {
         while !self.is_at_end() {
             self.start = self.current; 
             self.scan_token();
         }
 
-        self.tokens.push(Token::new(EOF, "",None, self.line));
-        return &self.tokens;
+        self.tokens.push(Token::new(EOF, "".to_string(),None, self.line));
+        return self.tokens.clone();
 
     }
 
@@ -108,7 +108,7 @@ impl<'a> Scanner<'a> {
     }
 
     fn add_literal(&mut self, token: TokenType, literal: Option<Literal>) {
-        let text = &self.source[self.start..self.current];
+        let text = self.source[self.start..self.current].to_string();
         self.tokens.push(Token::new(token, text, literal, self.line))
     }
 
