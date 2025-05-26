@@ -3,6 +3,7 @@ mod token;
 mod scanner;
 mod parser;
 mod ast;
+mod interpreter;
 
 use std::env;
 use std::io::{self, BufRead, Write};
@@ -13,6 +14,7 @@ use crate::scanner::Scanner;
 use crate::token::Token;
 use crate::token_type::TokenType;
 use crate::parser::Parser;
+use crate::interpreter::Interpreter;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -60,11 +62,17 @@ fn run(source: String) {
     } 
 
     let mut parser: Parser = Parser::new(tokens);
-    let expression = parser.parse();
-    match expression {
-        None => {println!("NONO");},
-        Some(e) => {println!("YAYA"); println!("{}", e.print())}
+    let expression_opt = parser.parse();
+
+
+    if expression_opt.is_none() {
+        return 
     }
+    
+    let expression = expression_opt.unwrap();
+    
+    let interpreter = Interpreter{};
+    interpreter.interpret(expression);
 }
 
 pub fn error(line: usize, message: &'static str) {
