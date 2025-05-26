@@ -110,6 +110,10 @@ impl Value {
         Ok(Self::Boolean(self.is_equal(other)))
     }
 
+    pub fn not_equals (&self, other: Value) -> Result<Self, InterpreterError>{
+        Ok(Self::Boolean(!self.is_equal(other)))
+    }
+
     pub fn stringify(&self) -> String {
         match self {
             Self::Number(n) => {if n.fract() == 0.0 {(*n as i32).to_string()} else {n.to_string()}},
@@ -132,6 +136,13 @@ impl Interpreter {
             TokenType::MINUS => left.subtract(right),
             TokenType::SLASH => left.divide(right),
             TokenType::STAR => left.multiply(right),
+
+            TokenType::GREATER => left.greater(right),
+            TokenType::GREATER_EQUAL => left.greater_equal(right),
+            TokenType::LESS => left.less(right),
+            TokenType::LESS_EQUAL => left.less_equal(right),
+            TokenType::BANG_EQUAL => left.not_equals(right),
+            TokenType::EQUAL_EQUAL => left.equals(right),
             _ => Err(InterpreterError)
         }
     }
