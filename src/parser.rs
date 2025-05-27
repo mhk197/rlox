@@ -2,20 +2,22 @@ use crate::token::Token;
 use crate::token_error;
 use crate::token_type::TokenType;
 use crate::token_type::TokenType::*;
-use crate::ast::Expression;
+use crate::ast::{Expression, Statement, VarDeclaration};
 
 struct ParseError;
 
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
+    pub had_error: bool
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
         Self {
             tokens,
-            current: 0
+            current: 0,
+            had_error: false
         }
     }
 
@@ -126,7 +128,9 @@ impl Parser {
         } else if self.match_(vec![LEFT_PAREN]) { // must be parentheses
             let expression = self.expression()?;
             self.consume(RIGHT_PAREN, "Expect ')' after expression.")?;
-            return Ok(Expression::grouping(expression))
+            return Ok(Expression::grouping(expression)) 
+        } else if self.match_(vec![TokenType::IDENTIFIER]){
+            return Ok(Expression::variable(self.previous()))
         } else {
             Err(self.parse_error(self.peek(), "Expect expression."))
         }
@@ -169,10 +173,54 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Option<Expression> {
-        match self.expression() {
-            Ok(e) => Some(e),
-            Err(_) => None
+    fn print_statement(&mut self) -> Result<Statement, ParseError> {
+        let value = self.expression()?;
+        self.consume(TokenType::SEMICOLON, "Expect ';' after value.");
+        Ok(Statement::Print(value))
+    }
+
+    fn expression_statement(&mut self) -> Result<Statement, ParseError> {
+        let value = self.expression()?;
+        self.consume(TokenType::SEMICOLON, "Expect ';' after value.");
+        Ok(Statement::Expression(value))
+    }
+
+    fn statement(&mut self) -> Result<Statement, ParseError> {
+        if self.match_(vec![TokenType::PRINT]) {
+            return self.print_statement()
         }
+
+        self.expression_statement()
+    }
+
+    fn var_declaration(&mut self) -> Result<Statement, ParseError> {
+        let name = self.consume(TokenType::IDENTIFIER, "Expect variable name.")?;
+
+        let mut initializer: Option<Expression> = None;
+        if self.match_(vec![TokenType::EQUAL]) {
+            initializer = Some(self.expression()?);
+        }
+
+        self.consume(TokenType::SEMICOLON, "Expect ';' after variable declaration.");
+        return Ok(Statement::VarDeclaration(VarDeclaration{name, initializer}))
+    }
+
+    fn declaration(&mut self) -> Result<Statement, ParseError> {
+        if self.match_(vec![TokenType::VAR]) {
+            return self.var_declaration()
+        } else {
+            return self.statement()
+        }
+    }
+
+    pub fn parse(&mut self) -> Vec<Option<Statement>> {
+        let mut statements: Vec<Option<Statement>> = Vec::new();
+        while !self.is_at_end() {
+            match self.declaration() {
+                Ok(s) => statements.push(Some(s)),
+                Err(_) => {statements.push(None); self.had_error = true; self.synchronize();}
+            }
+        }
+        statements
     }
 }

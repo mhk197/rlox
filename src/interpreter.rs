@@ -1,7 +1,4 @@
-use std::fmt;
-use std::result;
-
-use crate::ast::{BinaryExpression, Expression, GroupingExpression, LiteralExpression, UnaryExpression};
+use crate::{ast::{BinaryExpression, Expression, GroupingExpression, LiteralExpression, Statement, UnaryExpression, VarExpression}, environment::Environment};
 use strum_macros::Display;
 use crate::token_type::{Literal, TokenType};
 
@@ -124,9 +121,17 @@ impl Value {
     }
 }
 
-pub struct Interpreter;
+pub struct Interpreter {
+    environment: Environment
+}
 
 impl Interpreter {
+    pub fn new() -> Self {
+        Self {
+            environment: Environment::new()
+        }
+    }
+
     fn binary(&self, expression: BinaryExpression) -> Result<Value, InterpreterError>{
         let left = self.evaluate(*expression.left)?;
         let right = self.evaluate(*expression.right)?;
@@ -180,17 +185,47 @@ impl Interpreter {
         }
     }
 
+    fn variable(&self, expression: VarExpression) -> Result<Value, InterpreterError> {
+        self.environment.get(expression.name)
+    }
+
+    fn statement(&mut self, statement: Statement) -> Result<Value, InterpreterError> {
+        match statement {
+            Statement::Expression(e) => self.evaluate(e),
+            Statement::Print(e) => {
+                let val = self.evaluate(e)?; 
+                println!("{}", val.stringify());
+                Ok(val)
+            },
+            Statement::VarDeclaration(e) => {
+                let mut val = Value::Null;
+                if !e.initializer.is_none() {
+                    val = self.evaluate(e.initializer.unwrap())?;
+                }
+
+                self.environment.define(e.name.lexeme.clone(), val.clone());
+                Ok(val.clone())
+            }
+        }
+    }
+
     pub fn evaluate(&self, expression: Expression) -> Result<Value, InterpreterError> {
         match expression {
             Expression::Binary(b) => self.binary(b),
             Expression::Grouping(g) => self.grouping(g),
             Expression::Unary(u) => self.unary(u),
-            Expression::Literal(l) => self.literal(l)
+            Expression::Literal(l) => self.literal(l),
+            Expression::Variable(v) => self.variable(v)
         }
     }
 
-    pub fn interpret(&self, expression: Expression) {
-        let val = self.evaluate(expression).unwrap();
-        println!("{}", val.stringify());
+    pub fn execute(&mut self, statement: Statement) {
+        self.statement(statement).unwrap();
+    }
+
+    pub fn interpret(&mut self, statements: Vec<Statement>) {
+        for statement in statements {
+            self.execute(statement);
+        }
     }
 }

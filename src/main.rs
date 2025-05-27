@@ -4,6 +4,7 @@ mod scanner;
 mod parser;
 mod ast;
 mod interpreter;
+mod environment;
 
 use std::env;
 use std::io::{self, BufRead, Write};
@@ -62,17 +63,17 @@ fn run(source: String) {
     } 
 
     let mut parser: Parser = Parser::new(tokens);
-    let expression_opt = parser.parse();
+    let statements_opt = parser.parse();
 
 
-    if expression_opt.is_none() {
+    if parser.had_error {
         return 
     }
     
-    let expression = expression_opt.unwrap();
-    
-    let interpreter = Interpreter{};
-    interpreter.interpret(expression);
+    let statements = statements_opt.into_iter().map(Option::unwrap).collect::<Vec<_>>();
+
+    let mut interpreter = Interpreter::new();
+    interpreter.interpret(statements);
 }
 
 pub fn error(line: usize, message: &'static str) {

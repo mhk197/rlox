@@ -4,11 +4,25 @@ use strum_macros::Display;
 use std::fmt;
 
 #[derive(Debug, Clone)]
+pub enum Statement {
+    Expression(Expression),
+    Print(Expression),
+    VarDeclaration(VarDeclaration)
+}
+
+#[derive(Debug, Clone)]
+pub struct VarDeclaration {
+    pub name: Token, 
+    pub initializer: Option<Expression>
+}
+
+#[derive(Debug, Clone)]
 pub enum Expression {
     Binary(BinaryExpression),
     Grouping(GroupingExpression),
     Literal(LiteralExpression),
-    Unary(UnaryExpression)
+    Unary(UnaryExpression),
+    Variable(VarExpression)
 }
 
 
@@ -38,6 +52,11 @@ pub struct UnaryExpression {
     pub right: Box<Expression>
 }
 
+#[derive(Debug, Clone)]
+pub struct VarExpression {
+    pub name: Token
+}
+
 impl Expression {
     pub fn binary(left: Expression, operator: Token, right: Expression) -> Self {
         Self::Binary(BinaryExpression {
@@ -58,6 +77,12 @@ impl Expression {
         Self::Unary(UnaryExpression{
             operator,
             right: Box::new(right)
+        })
+    }
+
+    pub fn variable(token: Token) -> Self {
+        Self::Variable(VarExpression {
+            name: token
         })
     }
 
@@ -90,7 +115,8 @@ impl Expression {
                                 LiteralExpression::String(t) => t.to_string()
                             }
                         },
-                        Expression::Unary(e) => self.parenthesize(e.operator.lexeme.clone(), vec![*e.right.clone()])
+                        Expression::Unary(e) => self.parenthesize(e.operator.lexeme.clone(), vec![*e.right.clone()]),
+                        Expression::Variable(v) => v.name.to_string()
 
                 };
             s.push_str(&part);
@@ -111,7 +137,8 @@ impl Expression {
                     LiteralExpression::String(t) => t.to_string()
                 }
             },
-            Expression::Unary(e) => self.parenthesize(e.operator.lexeme.clone(), vec![*e.right.clone()])
+            Expression::Unary(e) => self.parenthesize(e.operator.lexeme.clone(), vec![*e.right.clone()]),
+            Expression::Variable(v) => v.name.to_string()
         }
     }
 }
